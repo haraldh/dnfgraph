@@ -24,14 +24,13 @@ def subtree(G, node):
 def subtree_size(G):
     return sum(int(v) for k,v in nx.get_node_attributes(G, "size").items())
 
-sizes={}
+sizes=[]
 
 for n in G.node:
     S = subtree(G, n)
     nx.write_dot(S, "Tree-" + n + ".dot")
-    sizes[n] = subtree_size(S)
+    sizes.append((n, subtree_size(S), len(S.node)))
 
-
-for n,s in sorted(sizes.items(), key=lambda x: x[1], reverse=True):
-    print("%6d kB  %s" % (s/1024, n))
+for n,s,l in sorted(sizes, key=lambda x: x[1], reverse=True):
+    print("%6d kB  %s (%d packages)" % (s/1024, n, l))
 
