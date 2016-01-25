@@ -6,7 +6,7 @@ $ dnf -C -q --disablerepo=* --enablerepo=rawhide repoquery  --arch=noarch,x86_64
   rpm dnf docker glibc grub2 dracut grep bzip2 gzip xz zlib less \
   iproute chrony openssh-clients procps-ng rsync sed sudo tar \
   subscription-manager filesystem initscripts findutils  \
-  | python3 reduce.py
+  | python3 subtrees.py
 
 140312 kB  glibc
 125746 kB  glibc-common
