@@ -41,6 +41,9 @@ Tree-bind99-libs.dot                    Tree-gmp.dot                        Tree
 Tree-bind99-license.dot                 Tree-gnupg2.dot                     Tree-libreport-filesystem.dot  Tree-python3-hawkey.dot
 […]
 
-$ cat Tree-subscription-manager.dot | dot   -Gsmoothing=1    -Gstart=3 -Goverlap=prism  -Gsplines=spline -Ecolor=#44444455 -Tsvg > foo.svg && firefox foo.svg
+$ cat Tree-subscription-manager.dot \
+  | dot -Gsmoothing=1 -Gstart=3 -Goverlap=prism \
+        -Gsplines=spline -Tsvg \
+        > foo.svg && firefox foo.svg
 
 ```
