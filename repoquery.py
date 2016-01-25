@@ -489,14 +489,9 @@ class RepoQueryCommand(dnf.cli.Command):
             if pkg.name.startswith("rpmlib") or pkg.name.startswith("solvable"):
                 return
 
-            if parent:
-                self.print_node(pkg)
-                self.print_edge(parent, pkg, recommends=recommends)
-
             if pkg not in usedpkgs:
                 usedpkgs.add(pkg)
-                if not parent:
-                    self.print_node(pkg)
+                self.print_node(pkg)
 
                 ar = list()
                 for name in set(pkg.recommends):
@@ -521,6 +516,10 @@ class RepoQueryCommand(dnf.cli.Command):
                 pkgquery = self.base.sack.query().filter(pkg=ar)
 
                 self.rec_seed(pkgquery, aquery, opts, level + 1, usedpkgs, parent=pkg)
+
+            if parent:
+                self.print_edge(parent, pkg, recommends=recommends)
+
 
 
 class PackageWrapper(object):
