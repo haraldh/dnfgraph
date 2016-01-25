@@ -6,7 +6,8 @@ Needs `python3-networkx`.
 ```
 $ sudo cp repoquery.py /usr/lib/python3.5/site-packages/dnf-plugins/repoquery.py
 
-$ dnf -C -q --disablerepo=* --enablerepo=rawhide repoquery  --arch=noarch,x86_64 --requires  --graphviz \
+$ dnf -C -q --disablerepo=* --enablerepo=rawhide repoquery  \
+  --arch=noarch,x86_64 --requires --graphviz \
   coreutils systemd bash NetworkManager util-linux kernel-core \
   rpm dnf docker glibc grub2 dracut grep bzip2 gzip xz zlib less \
   iproute chrony openssh-clients procps-ng rsync sed sudo tar \
