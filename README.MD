@@ -1,3 +1,8 @@
+Make sure, you don't have `python3-pydot` installed, but `pydot` (maybe from F23) and `python3-pydotplus`.
+
+Needs `python3-networkx`.
+
+
 ```
 $ sudo cp repoquery.py /usr/lib/python3.5/site-packages/dnf-plugins/repoquery.py
 
