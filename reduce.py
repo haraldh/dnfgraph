@@ -1,110 +1,37 @@
 #
 
 import networkx as nx
+import sys
 
-G=nx.read_dot("/dev/stdin")
+G = nx.DiGraph(nx.read_dot("/dev/stdin"))
 
-remove_pkg = (
-    "coreutils-single",
-)
+def subtree(G, node):
+    GS = G.copy()
+    GS.remove_node(node)
+    st = nx.descendants(G, node)
+    st.add(node)
+    S = G.subgraph(st).copy()
 
-reduce_pkg=(
-    "coreutils",
-    "systemd",
-    "bash",
-    "NetworkManager",
-    "util-linux",
-    "kernel-core",
-    "rpm",
-    "dnf",
-    "docker",
-    "glibc",
-    "grub2",
-    "dracut",
-    "grep",
-    "bzip2",
-    "gzip",
-    "xz",
-    "zlib",
-    "less",
-    "iproute",
-    "chrony",
-    "openssh-clients",
-    "procps-ng",
-    "rsync",
-    "sed",
-    "sudo",
-    "tar",
-    "subscription-manager",
-    "filesystem",
-    "initscripts",
-    "findutils",
-    "gcc",
-    "libgcc",
-    "libstdc++",
-)
+    for n in st:
+        if n == node:
+            continue
+        ns = nx.ancestors(GS, n)
+        if not ns.issubset(st):
+            S.remove_node(n)
 
-for p in remove_pkg:
-    G.remove_node(p)
+    return S
 
-a = nx.get_node_attributes(G, "src")
+def subtree_size(G):
+    return sum(int(v) for k,v in nx.get_node_attributes(G, "size").items())
 
-for k,v in a.items():
-    G.node[k]["src"]=v.strip('"')
+sizes={}
 
-a = nx.get_node_attributes(G, "src")
+for n in G.node:
+    S = subtree(G, n)
+    nx.write_dot(S, "Tree-" + n + ".dot")
+    sizes[n] = subtree_size(S)
 
-# for p in reduce_pkg:
-#     if not p in G.node:
-#         continue
 
-#     p = G.node[p]["src"]
-#     for (k,v) in a.items():
-#         if p == v:
-#             if not k in G.node:
-#                 continue
-#             G.remove_edges_from(G.in_edges(k))
-
-# for p in reduce_pkg:
-#     if not p in G.node:
-#         continue
-
-#     p = G.node[p]["src"]
-#     for (k,v) in a.items():
-#         if p == v:
-#             if not k in G.node:
-#                 continue
-#             if len(G.out_edges(k)) == 0:
-#                 G.remove_node(k)
-#                 continue
-
-for p in reduce_pkg:
-    if not p in G.node:
-        continue
-
-    p = G.node[p]["src"]
-    for (k,v) in a.items():
-        if p == v:
-            if not k in G.node:
-                continue
-            for i in G.successors(k):
-                if "recommends" in G.edge[k][i][0]:
-                    G.node[i]["color"]="#7777FF"
-                else:
-                    G.node[i]["color"]="#FF0000"
-            G.remove_node(k)
-
-checked = set()
-
-for (a,b,c) in nx.get_edge_attributes(G, "recommends"):
-    G.edge[a][b][c]["color"]="#7777FF"
-    if b not in checked:
-        checked.add(b)
-        for (x,y) in G.in_edges(b):
-            if not "recommends" in G.edge[x][y][0]:
-                break
-        else:
-            G.node[b]["color"]="#7777FF"
-
-nx.write_dot(G, "/dev/stdout")
+for n,s in sorted(sizes.items(), key=lambda x: x[1], reverse=True):
+    print("%6d kB  %s" % (s/1024, n))
 
