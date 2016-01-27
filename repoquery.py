@@ -389,7 +389,7 @@ class RepoQueryCommand(dnf.cli.Command):
                         "--provides|--suplements|--recommends] [key] [--tree]\n\n"
                         "description:\n  For the given packages print a tree of the packages."))
             print("strict digraph G {");
-            self.rec_seed(q, orquery, self.opts)
+            self.print_graph(q, orquery, self.opts)
             print("}");
 
             return
@@ -480,7 +480,7 @@ class RepoQueryCommand(dnf.cli.Command):
         else:
             print("\t\"%s\" -> \"%s\"" % (parent.name, pkg.name));
 
-    def rec_seed(self, query, aquery, opts, level=-1, usedpkgs=None, parent=None, recommends=False):
+    def print_graph(self, query, aquery, opts, level=-1, usedpkgs=None, parent=None, recommends=False):
         usedpkgs = set() if usedpkgs is None or level is -1 else usedpkgs
         for pkg in sorted(set(query.run()), key=lambda p: p.name):
             if pkg.installed:
@@ -503,7 +503,7 @@ class RepoQueryCommand(dnf.cli.Command):
 
                 pkgquery = self.base.sack.query().filter(pkg=ar)
 
-                self.rec_seed(pkgquery, aquery, opts, level + 1, usedpkgs, parent=pkg, recommends=True)
+                self.print_graph(pkgquery, aquery, opts, level + 1, usedpkgs, parent=pkg, recommends=True)
 
                 ar = list()
                 for name in set(pkg.requires):
@@ -515,7 +515,7 @@ class RepoQueryCommand(dnf.cli.Command):
 
                 pkgquery = self.base.sack.query().filter(pkg=ar)
 
-                self.rec_seed(pkgquery, aquery, opts, level + 1, usedpkgs, parent=pkg)
+                self.print_graph(pkgquery, aquery, opts, level + 1, usedpkgs, parent=pkg)
 
             if parent:
                 self.print_edge(parent, pkg, recommends=recommends)
