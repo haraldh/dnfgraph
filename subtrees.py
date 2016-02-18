@@ -9,7 +9,11 @@ DOT = "REPO.dot"
 MAIN_PKGS = sys.argv[1:]
 
 print("Querying dnf for dependencies", file=sys.stderr)
-status = subprocess.call("dnf -q --disablerepo=* --enablerepo=rawhide repoquery --arch=noarch,x86_64 --requires  --graphviz " \
+status = subprocess.call("dnf -q --disablerepo=*" \
+                         + " --enablerepo=rawhide repoquery --enablerepo=fedora-rawhide-kernel-nodebug" \
+                         + " --installroot=$PWD" \
+                         + " --arch=noarch,x86_64" \
+                         + " --requires --graphviz " \
                          + " ".join(MAIN_PKGS) + " > " + DOT, shell=True)
 
 print("Reading result", file=sys.stderr)
@@ -44,6 +48,7 @@ def subtree(G, node):
 
     for n in pn.difference(s):
         GS.node[n]["fontcolor"] = "#FF0000"
+        GS.node[n]["remove"] = "1"
 
     for n in s:
         GS.node[n]["fontcolor"] = "#006600"
@@ -54,6 +59,9 @@ def subtree(G, node):
 
 def subtree_size(G):
     return sum(int(v) for k,v in nx.get_node_attributes(G, "size").items())
+
+def remove_nodes(G):
+    return nx.get_node_attributes(G, "remove").keys()
 
 sizes=[]
 
@@ -70,7 +78,7 @@ for n in G.node:
     print("Calculating SVG for subtree of " + n, file=sys.stderr)
     status = subprocess.call("dot -Gsmoothing=1 -Goverlap=prism -Gsplines=spline -Ecolor=#00000040 -Tsvg " \
                              + "Tree-" + n + ".dot > Tree-" + n + ".svg", shell=True)
-    sizes.append((n, subtree_size(S), len(S.node), len(GS.node) - len(S.node)))
+    sizes.append((n, subtree_size(S), len(S.node), len(GS.node) - len(S.node), remove_nodes(GS)))
 
 print("""
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
@@ -102,9 +110,9 @@ print("<li>Reqs  = number of rpm packages, where the dependency has to be remove
 print("<ul><li>Green = packages which can be removed</li>")
 print("<li>Red = packages where the dependency has to be removed</li></ul>")
 print("<table>")
-print("<tr><th>Size</th><th>Saved</th><th>Reqs</th><th>Name</th></tr>")
-for n,s,l,r in sorted(sizes, key=lambda x: x[1], reverse=True):
-    print("<tr><td style=\"text-align:right\">%d</td><td style=\"text-align:right\">%d</td><td style=\"text-align:right\">%d</td><td>%s <a href=\"%s\">SVG</a> <a href=\"%s\">DOT</a></td></tr>" % (s/1024, l, r, n, "Tree-" + n + ".svg", "Tree-" + n + ".dot"))
+print("<tr><th>Size</th><th>Saved</th><th>Reqs</th><th>SVG</th><th>DOT</th><th>Name</th><th>Remove Dep from</th></tr>")
+for n,s,l,r,p in sorted(sizes, key=lambda x: x[1], reverse=True):
+    print("<tr><td style=\"text-align:right\">%d</td><td style=\"text-align:right\">%d</td><td style=\"text-align:right\">%d</td><td><a href=\"%s\">SVG</a></td><td><a href=\"%s\">DOT</a></td><td>%s</td><td>%s</td></tr>" % (s/1024, l, r, "Tree-" + n + ".svg", "Tree-" + n + ".dot", n, ", ".join(p)))
 print("</table>")
 print("""
   </body>
