@@ -474,13 +474,10 @@ class RepoQueryCommand(dnf.cli.Command):
 
         print("\t\"%s\" [src=\"%s\", size=%ld];" % (pkg.name, src, pkg.installsize))
 
-    def print_edge(self, parent, pkg, recommends=False):
-        if recommends:
-            print("\t\"%s\" -> \"%s\" [recommends=1]" % (parent.name, pkg.name));
-        else:
-            print("\t\"%s\" -> \"%s\"" % (parent.name, pkg.name));
+    def print_edge(self, parent, pkg):
+        print("\t\"%s\" -> \"%s\"" % (parent.name, pkg.name))
 
-    def print_graph(self, query, aquery, opts, level=-1, usedpkgs=None, parent=None, recommends=False):
+    def print_graph(self, query, aquery, opts, level=-1, usedpkgs=None, parent=None):
         usedpkgs = set() if usedpkgs is None or level is -1 else usedpkgs
         for pkg in sorted(set(query.run()), key=lambda p: p.name):
             if pkg.installed:
@@ -489,36 +486,30 @@ class RepoQueryCommand(dnf.cli.Command):
             if pkg.name.startswith("rpmlib") or pkg.name.startswith("solvable"):
                 return
 
-            if pkg not in usedpkgs:
-                usedpkgs.add(pkg)
+            if parent:
+                self.print_edge(parent, pkg)
+            else:
+                print("\t\"MAIN\" -> \"%s\"" % (pkg.name))
+
+            if pkg.name not in usedpkgs:
+                usedpkgs.add(pkg.name)
                 self.print_node(pkg)
 
                 ar = list()
-                for name in set(pkg.recommends):
+                #print (pkg)
+                for name in pkg.requires:
+                    #print (type(name))
+                    #print(name)
                     if opts.arch:
                         pkgquery = self.base.sack.query().filter(provides=name, arch=[arch.strip() for arch in opts.arch.split(",")])
                     else:
                         pkgquery = self.base.sack.query().filter(provides=name)
                     ar.extend(pkgquery)
 
-                pkgquery = self.base.sack.query().filter(pkg=ar)
-
-                self.print_graph(pkgquery, aquery, opts, level + 1, usedpkgs, parent=pkg, recommends=True)
-
-                ar = list()
-                for name in set(pkg.requires):
-                    if opts.arch:
-                        pkgquery = self.base.sack.query().filter(provides=name, arch=[arch.strip() for arch in opts.arch.split(",")])
-                    else:
-                        pkgquery = self.base.sack.query().filter(provides=name)
-                    ar.extend(pkgquery)
-
+                #print(ar)
                 pkgquery = self.base.sack.query().filter(pkg=ar)
 
                 self.print_graph(pkgquery, aquery, opts, level + 1, usedpkgs, parent=pkg)
-
-            if parent:
-                self.print_edge(parent, pkg, recommends=recommends)
 
 
 

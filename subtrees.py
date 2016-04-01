@@ -4,23 +4,26 @@ import networkx as nx
 import sys
 import itertools
 import subprocess
+import os
 
-DOT = "REPO.dot"
-MAIN_PKGS = sys.argv[1:]
+d = os.path.dirname("html")
+if not os.path.exists("html"):
+    os.makedirs("html")
+
+DOT = "html/MAIN.dot"
+MAIN_PKGS = [i for i in sys.argv[1:] if i[:2] != '--']
+EXTRA_ARGS = [i for i in sys.argv[1:] if i[:2] == '--']
 
 print("Querying dnf for dependencies", file=sys.stderr)
-status = subprocess.call("dnf -q --disablerepo=*" \
-                         + " --enablerepo=rawhide repoquery --enablerepo=fedora-rawhide-kernel-nodebug" \
-                         + " --installroot=$PWD" \
-                         + " --arch=noarch,x86_64" \
-                         + " --exclude=glibc*" \
-                         + " --requires --graphviz " \
-                         + " ".join(MAIN_PKGS) + " > " + DOT, shell=True)
+cmd = "dnf -q repoquery --installroot=$PWD " + " ".join(EXTRA_ARGS) + " --requires --graphviz " \
+                         + " ".join(MAIN_PKGS) + " > " + DOT
+
+print("Executing: " + cmd, file=sys.stderr)
+
+status = subprocess.call(cmd, shell=True)
 
 print("Reading result", file=sys.stderr)
 G = nx.DiGraph(nx.drawing.nx_pydot.read_dot(DOT))
-
-G.add_edges_from(("REPO", n) for n in MAIN_PKGS)
 
 def subtree(G, node):
     GS = G.copy()
@@ -42,7 +45,7 @@ def subtree(G, node):
 
     gs = set(
         itertools.chain.from_iterable(
-            nx.shortest_path(G, "REPO", n) for n in pn
+            nx.shortest_path(G, "MAIN", n) for n in pn
         ))
 
     GS = G.subgraph(gs.union(s)).copy()
@@ -54,7 +57,7 @@ def subtree(G, node):
     for n in s:
         GS.node[n]["fontcolor"] = "#006600"
 
-    GS.remove_node("REPO")
+    GS.remove_node("MAIN")
 
     return S, GS
 
@@ -68,18 +71,20 @@ sizes=[]
 
 print("Calculating SVG for main tree", file=sys.stderr)
 status = subprocess.call("dot -Gsmoothing=1 -Goverlap=prism -Gsplines=spline -Ecolor=#00000040 -Tsvg " \
-                         + DOT + " > REPO.svg", shell=True)
+                         + DOT + " > html/MAIN.svg", shell=True)
 
 for n in G.node:
-    if n == "REPO":
+    if n == "MAIN":
         continue
     print("Calculating subtree of " + n, file=sys.stderr)
     S, GS = subtree(G, n)
-    nx.drawing.nx_pydot.write_dot(GS, "Tree-" + n + ".dot")
+    nx.drawing.nx_pydot.write_dot(GS, "html/Tree-" + n + ".dot")
     print("Calculating SVG for subtree of " + n, file=sys.stderr)
     status = subprocess.call("dot -Gsmoothing=1 -Goverlap=prism -Gsplines=spline -Ecolor=#00000040 -Tsvg " \
-                             + "Tree-" + n + ".dot > Tree-" + n + ".svg", shell=True)
+                             + "html/Tree-" + n + ".dot > html/Tree-" + n + ".svg", shell=True)
     sizes.append((n, subtree_size(S), len(S.node), len(GS.node) - len(S.node), remove_nodes(GS)))
+
+index_file = open('html/index.html', 'w')
 
 print("""
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
@@ -97,31 +102,31 @@ td {
 </style>
   </head>
   <body>
-""")
+""", file=index_file)
 
-print("<h3>Graph:</h3><p><a href=\"REPO.svg\">Dependency Graph</a> of the following packages:<ul>")
+print("<h3>Graph:</h3><p><a href=\"MAIN.svg\">Dependency Graph</a> of the following packages:<ul>", file=index_file)
 for n in sorted(MAIN_PKGS):
-    print("<li>" + n + "</li>")
-print("</ul></p>")
-
-print("<h3>Cycles:</h3><p><ul>")
+    print("<li>" + n + "</li>", file=index_file)
+print("</ul></p>", file=index_file)
+print("<p>Installation size: %d" % (subtree_size(G)), file=index_file)
+print("<h3>Cycles:</h3><p><ul>", file=index_file)
 for n in nx.simple_cycles(G):
-    print("<li>" + " ".join(n) + "</li>")
-print("</ul></p>")
+    print("<li>" + " ".join(n) + "</li>", file=index_file)
+print("</ul></p>", file=index_file)
 
-print("<h3>Removal:</h3>")
-print("<p>Filesystem space to save, if package is removed:<ul>")
-print("<li>Size = kB saved on the filesystem</li>")
-print("<li>Saved = number of rpm packages, which can be removed</li>")
-print("<li>Reqs  = number of rpm packages, where the dependency has to be removed</li></ul>")
-print("<ul><li>Green = packages which can be removed</li>")
-print("<li>Red = packages where the dependency has to be removed</li></ul>")
-print("<table>")
-print("<tr><th>Size</th><th>Saved</th><th>Reqs</th><th>SVG</th><th>DOT</th><th>Name</th><th>Remove Dep from</th></tr>")
+print("<h3>Removal:</h3>", file=index_file)
+print("<p>Filesystem space to save, if package is removed:<ul>", file=index_file)
+print("<li>Size = kB saved on the filesystem</li>", file=index_file)
+print("<li>Saved = number of rpm packages, which can be removed</li>", file=index_file)
+print("<li>Reqs  = number of rpm packages, where the dependency has to be removed</li></ul>", file=index_file)
+print("<ul><li>Green = packages which can be removed</li>", file=index_file)
+print("<li>Red = packages where the dependency has to be removed</li></ul>", file=index_file)
+print("<table>", file=index_file)
+print("<tr><th>Size</th><th>Saved</th><th>Reqs</th><th>SVG</th><th>DOT</th><th>Name</th><th>Remove Dep from</th></tr>", file=index_file)
 for n,s,l,r,p in sorted(sizes, key=lambda x: x[1], reverse=True):
-    print("<tr><td>%d</td><td>%d</td><td>%d</td><td><a href=\"%s\">SVG</a></td><td><a href=\"%s\">DOT</a></td><td>%s</td><td>%s</td></tr>" % (s/1024, l, r, "Tree-" + n + ".svg", "Tree-" + n + ".dot", n, ", ".join(p)))
-print("</table>")
+    print("<tr><td>%d</td><td>%d</td><td>%d</td><td><a href=\"%s\">SVG</a></td><td><a href=\"%s\">DOT</a></td><td>%s</td><td>%s</td></tr>" % (s/1024, l, r, "Tree-" + n + ".svg", "Tree-" + n + ".dot", n, ", ".join(p)), file=index_file)
+print("</table>", file=index_file)
 print("""
   </body>
 </html>
-""")
+""", file=index_file)

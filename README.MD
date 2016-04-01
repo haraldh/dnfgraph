@@ -27,18 +27,21 @@ $ cat RPMS.dot \
   | dot -Gsmoothing=1 -Gstart=3 -Goverlap=prism \
         -Gsplines=spline -Tsvg \
         > RPMS.svg && firefox RPMS.svg
-
 ```
 
 Generate statistics on how much diskspace to save, if a component and it's independant dependencies are not needed anymore
 ```
 $ mkdir tt; cd tt
 $ python3 ../subtrees.py \
+  '--disablerepo=*' --enablerepo=rawhide \
+  --enablerepo=fedora-rawhide-kernel-nodebug \
+  --arch=noarch,x86_64 \
+  '--exclude=glibc*langpack*' \
   coreutils systemd bash NetworkManager util-linux kernel-core \
   rpm dnf docker glibc grub2 dracut grep bzip2 gzip xz zlib less \
   iproute chrony openssh-clients procps-ng rsync sed sudo tar \
-  subscription-manager filesystem initscripts findutils  \
-  > index.html && firefox index.html
+  subscription-manager filesystem initscripts findutils
+$ firefox html/index.html
 ```
 
 Now view the results in a nice HTML page.
