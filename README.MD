@@ -1,8 +1,6 @@
 Make sure, you don't have `python3-pydot` installed, but `pydot` (maybe from F23) and `python3-pydotplus`.
 
-Needs `python3-networkx`.
-
-Unless https://bugzilla.redhat.com/show_bug.cgi?id=1303117 is fixed, dnf repoquery will not pick up and "Requires(pre)".
+Needs `python3-networkx >= 1.11` and `python3-networkx-drawing`.
 
 Install the modified repoquery.py dnf plugin:
 ```
